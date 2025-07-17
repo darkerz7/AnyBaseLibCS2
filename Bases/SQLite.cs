@@ -46,6 +46,31 @@ namespace AnyBaseLib.Bases
             return q.Replace("PRIMARY KEY AUTO_INCREMENT", "PRIMARY KEY AUTOINCREMENT").Replace("UNIX_TIMESTAMP()", "UNIXEPOCH()");
         }
 
+        public static string _PrepareArg(string arg)
+        {
+            if (arg == null) return "";
+
+            //var new_arg = arg;
+
+            //string[] escapes = ["'", "\"", "`", "%", "-", "_"];
+            string[] escapes = ["\\",  "`", "%"];
+            //string[] escapes = ["\\","'", "`", "%"];
+
+
+
+            //foreach (var escape in escapes)
+            //{
+            var new_arg = "";
+            foreach (var ch in arg)
+            {
+                if (escapes.Contains(ch.ToString()))
+                    new_arg += "\\";
+                new_arg += ch.ToString();
+            }
+            //new_arg = new_arg.Replace(escape, $"\\{escape}");
+
+            return new_arg.Replace("\"","\"\"").Replace("'","''");
+        }
 
         public List<List<string>> Query(string q, List<string> args = null, bool non_query = false)
         {
@@ -58,12 +83,13 @@ namespace AnyBaseLib.Bases
                 }
             }    
 
-            return Common.Query(dbConn, Common._PrepareClear(_FixForSQLite(q), args), non_query);
+            return Common.Query(dbConn, Common._PrepareClear(_FixForSQLite(q), args, _PrepareArg), non_query);
         }
 
         public void QueryAsync(string q, List<string> args, Action<List<List<string>>> action = null, bool non_query = false)
         {
-            Common.QueryAsync(dbConn, Common._PrepareClear(_FixForSQLite(q), args), action, non_query, false);
+            Common.QueryAsync(dbConn, Common._PrepareClear(_FixForSQLite(q), args, _PrepareArg), action, non_query, false);
+            
         }
         /*
         public void QueryDapperAsync(Type type, string q, List<string> args = null, Action<object> action = null)

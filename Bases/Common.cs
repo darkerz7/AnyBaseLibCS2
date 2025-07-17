@@ -26,16 +26,21 @@ namespace AnyBaseLib.Bases
             return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
         }
 
-        public static string _PrepareClear(string q, List<string> args)
+        public static string _PrepareClear(string q, List<string> args, Func<string,string> escape_func = null)
         {
             var new_q = q;
-            if(args != null) foreach (var arg in args.ToList())
-            {
-                var new_q2 = ReplaceFirst(new_q, "{ARG}", _PrepareArg(arg));
+            if(args != null)
+                foreach (string arg in args.ToList())
+                {
+                    var new_q2 = "";
+                    if (escape_func == null)
+                        new_q2 = ReplaceFirst(new_q, "{ARG}", _PrepareArg(arg));
+                    else
+                        new_q2 = ReplaceFirst(new_q, "{ARG}", escape_func(arg));
 
-                if (new_q2 == new_q) throw new Exception("Mailformed query [Too many args in params]");
-                new_q = new_q2;
-            }
+                    if (new_q2 == new_q) throw new Exception("Mailformed query [Too many args in params]");
+                    new_q = new_q2;
+                }
             if (new_q.Contains("{ARG}")) throw new Exception("Mailformed query [Not enough args in params]");
             return new_q;
         }
@@ -44,16 +49,25 @@ namespace AnyBaseLib.Bases
         {
             if (arg == null) return "";
             
-            var new_arg = arg;
+            //var new_arg = arg;
             
             //string[] escapes = ["'", "\"", "`", "%", "-", "_"];
-            string[] escapes = ["'", "\"", "`", "%", "\\"];
+            string[] escapes = ["\\","'", "\"", "`", "%"];
+            //string[] escapes = ["\\","'", "`", "%"];
 
-            foreach (var escape in escapes)
-            {
-                new_arg = new_arg.Replace(escape, $"\\{escape}");
-            }
             
+
+            //foreach (var escape in escapes)
+            //{
+            var new_arg = "";
+            foreach(var ch in arg)
+            {
+                if(escapes.Contains(ch.ToString()))
+                    new_arg += "\\";
+                new_arg += ch.ToString();
+            }
+                //new_arg = new_arg.Replace(escape, $"\\{escape}");
+                        
             return new_arg;
         }
 
@@ -61,6 +75,7 @@ namespace AnyBaseLib.Bases
         public static List<List<string>> _Query(DbConnection conn, string q, bool non_query)
         {
             if (conn.State != ConnectionState.Open) conn.Open();
+            
             var sql = conn.CreateCommand();
             sql.CommandText = q;
             if (!non_query)
